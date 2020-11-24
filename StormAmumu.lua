@@ -114,6 +114,13 @@ function Amumu.ComboLogic(mode)
         end
     end
 end
+---@param source AIBaseClient
+---@param spell SpellCast
+function Amumu.OnInterruptibleSpell(source, spell, danger, endT, canMove)
+    if not (source.IsEnemy and Menu.Get("Misc.IntQ") and spells.E:IsReady() and danger > 2) then return end
+
+    spells.Q:CastOnHitChance(source, Enums.HitChance.VeryHigh)
+end
 function Amumu.Auto()
    
 end
@@ -175,6 +182,10 @@ function Amumu.LoadMenu()
         Menu.Checkbox("Clear.UseQ",   "Use [Q] Jungle", true) 
         Menu.Checkbox("Clear.UseW",   "Use [W] Jungle", true) 
         Menu.Checkbox("Clear.UseE",   "Use [E] Jungle", true) 
+        Menu.Separator()
+
+        Menu.ColoredText("Misc Options", 0xFFD700FF, true)      
+        Menu.Checkbox("Misc.IntQ", "Use [Q] Interrupt", true)   
         Menu.Separator()
 
         Menu.ColoredText("Draw Options", 0xFFD700FF, true)
