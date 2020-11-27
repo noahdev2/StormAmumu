@@ -50,7 +50,26 @@ local function GameIsAvailable()
     return not (Game.IsChatOpen() or Game.IsMinimized() or Player.IsDead or Player.IsRecalling)
 end
 
-
+local function CountEnemiesInRange(pos, range, t)
+    local res = 0
+    for k, v in pairs(t or ObjManager.Get("neutral", "minions")) do
+        local hero = v.AsAI
+        if hero and hero.IsTargetable and hero:Distance(pos) < range then
+            res = res + 1
+        end
+    end
+    return res
+end
+local function CountEnemiesHeroesInRange(pos, range, t)
+    local res = 0
+    for k, v in pairs(t or ObjManager.Get("enemy", "heroes")) do
+        local hero = v.AsAI
+        if hero and hero.IsTargetable and hero:Distance(pos) < range then
+            res = res + 1
+        end
+    end
+    return res
+end
 function Amumu.IsEnabledAndReady(spell, mode)
     return Menu.Get(mode .. ".Use"..spell) and spells[spell]:IsReady()
 end
@@ -87,8 +106,11 @@ function Amumu.ComboLogic(mode)
     if Amumu.IsEnabledAndReady("Q", mode) then
         local qChance = Menu.Get(mode .. ".ChanceQ")
         for k, qTarget in ipairs(Amumu.GetTargets(spells.Q.Range)) do
-            if spells.Q:CastOnHitChance(qTarget, qChance) then
+            if not Menu.Get(qTarget.CharName) then return end
+            if qTarget:Distance(Player) < Menu.Get("Combo.QMaxRange") and qTarget:Distance(Player) >  Menu.Get("Combo.QMiniRange") then
+                if spells.Q:CastOnHitChance(qTarget, qChance) then
                 return
+                end
             end
         end
     end
@@ -98,6 +120,11 @@ function Amumu.ComboLogic(mode)
                 spells.W:Cast()
                 return
             end
+        end
+    end
+    if spells.W:IsReady() and Player:GetBuff("AuraOfDespair") then 
+        if CountEnemiesHeroesInRange(Player.Position,spells.W.Range) < 1 then
+            spells.W:Cast() return
         end
     end
     if Amumu.IsEnabledAndReady("E", mode) then
@@ -153,6 +180,11 @@ function Amumu.Waveclear()
             end    
         end
     end
+    if W and spells.W:IsReady() and Player:GetBuff("AuraOfDespair") then 
+        if CountEnemiesInRange(Player.Position,spells.W.Range) < 1 then
+            spells.W:Cast() return
+        end
+    end
     if E and spells.E:IsReady() then 
         for k, v in pairs(ObjManager.Get("neutral", "minions")) do
           local minion = v.AsAI
@@ -171,7 +203,14 @@ function Amumu.LoadMenu()
         Menu.ColumnLayout("cols", "cols", 1, true, function()
             Menu.ColoredText("Combo", 0xFFD700FF, true)
             Menu.Checkbox("Combo.UseQ",   "Use [Q]", true) 
-            Menu.Slider("Combo.ChanceQ", "HitChance [Q]", 0.7, 0, 1, 0.05)   
+            Menu.Slider("Combo.ChanceQ", "HitChance [Q]", 0.7, 0, 1, 0.05) 
+            Menu.Slider("Combo.QMaxRange", "Q Max Range", 1050, 0, 1050) 
+            Menu.Slider("Combo.QMiniRange", "Q Mini Range", 500, 0, 1050) 
+            Menu.ColoredText("Q Whitelist", 0xFFD700FF, true)
+            for _, Object in pairs(ObjManager.Get("enemy", "heroes")) do
+                local Name = Object.AsHero.CharName
+                Menu.Checkbox(Name, "Use [Q] on " .. Name, true)
+            end 
             Menu.Checkbox("Combo.UseW",   "Use [W]", true)
             Menu.Checkbox("Combo.UseE",   "Use [E]", true)
             Menu.Checkbox("Combo.UseR",   "Use [R]", true)
